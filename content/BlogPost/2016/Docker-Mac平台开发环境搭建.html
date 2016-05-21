@@ -1,0 +1,287 @@
+<h1>
+<a id="user-content-docker-mac平台开发环境搭建" class="anchor" href="#docker-mac%E5%B9%B3%E5%8F%B0%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Docker-Mac平台开发环境搭建</h1>
+
+<h3>
+<a id="user-content-一在osx环境下安装docker" class="anchor" href="#%E4%B8%80%E5%9C%A8osx%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85docker" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>一.在OSX环境下安装Docker</h3>
+
+<p>Mac用户可以通过Docker Toolbox安装docker，它包含了下面一些组件和工具:</p>
+
+<ul>
+<li>Docker CLI client</li>
+<li>Docker Machine</li>
+<li>Docker Compose</li>
+<li>Docker GUI.Kitematic</li>
+<li>Docker QuickStart</li>
+<li>Oracle VM VirtualBox </li>
+</ul>
+
+<p>由于Docker Engine是使用linux特有的内核特性，Mac不能直接在OSX上直接运行Docker。需要使用docker-machine 来创建一台虚拟机，该虚拟机上安装linux系统来运行Docker。</p>
+
+<h4>
+<a id="user-content-step-1-install-docker-toolbox" class="anchor" href="#step-1-install-docker-toolbox" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>step 1. Install Docker Toolbox</h4>
+
+<ol>
+<li>官网下载 <a href="https://www.docker.com/products/docker-toolbox">Docker Toolbox</a>
+</li>
+<li>下一步下一步搞定安装。</li>
+</ol>
+
+<h4>
+<a id="user-content-step-2-验证安装" class="anchor" href="#step-2-%E9%AA%8C%E8%AF%81%E5%AE%89%E8%A3%85" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>step 2. 验证安装</h4>
+
+<ul>
+<li><p>启动控制台，打开如下app。
+<a href="/media/content/BlogPost/images/14637317100743.jpg" target="_blank"><img src="/media/content/BlogPost/images/14637317100743.jpg" alt="" style="max-width:100%;"></a></p></li>
+<li><p>查看输出，如下：</p></li>
+</ul>
+
+<pre><code>➜  ~ bash --login '/Applications/Docker/Docker Quickstart Terminal.app/Contents/Resources/Scripts/start.sh'
+Creating CA: /Users/metaboy/.docker/machine/certs/ca.pem
+Creating client certificate: /Users/metaboy/.docker/machine/certs/cert.pem
+Running pre-create checks...
+Creating machine...
+(default) Copying /Users/metaboy/.docker/machine/cache/boot2docker.iso to /Users/metaboy/.docker/machine/machines/default/boot2docker.iso...
+(default) Creating VirtualBox VM...
+(default) Creating SSH key...
+^@
+(default) Starting the VM...
+(default) Check network to re-create if needed...
+(default) Found a new host-only adapter: "vboxnet0"
+(default) Waiting for an IP...
+Waiting for machine to be running, this may take a few minutes...
+Detecting operating system of created instance...
+Waiting for SSH to be available...
+Detecting the provisioner...
+Provisioning with boot2docker...
+Copying certs to the local machine directory...
+Copying certs to the remote machine...
+Setting Docker configuration on the remote daemon...
+Checking connection to Docker...
+Docker is up and running!
+To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: /usr/local/bin/docker-machine env default
+
+
+                        ##         .
+                  ## ## ##        ==
+               ## ## ## ## ##    ===
+           /"""""""""""""""""\___/ ===
+      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~~ ~ /  ===- ~~~
+           \______ o           __/
+             \    \         __/
+              \____\_______/
+
+
+docker is configured to use the default machine with IP 192.168.99.100
+For help getting started, check out the docs at https://docs.docker.com
+</code></pre>
+
+<ul>
+<li>使用docker run hello-world命令</li>
+</ul>
+
+<h3>
+<a id="user-content-二-搞清楚images和containers" class="anchor" href="#%E4%BA%8C-%E6%90%9E%E6%B8%85%E6%A5%9Aimages%E5%92%8Ccontainers" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>二. 搞清楚images和containers</h3>
+
+<p>回到第一小节中的执行命令: <code>docker run hello-world</code> .简单分析命令的组成： </p>
+
+<ul>
+<li>run ：告诉docker engine，运行一个container。</li>
+<li>hello-world： 一个镜像名称，如果本地没有，默认会从docker hub下载到本地。然后装载到container中。</li>
+</ul>
+
+<h3>
+<a id="user-content-三-正式开始" class="anchor" href="#%E4%B8%89-%E6%AD%A3%E5%BC%8F%E5%BC%80%E5%A7%8B" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>三. 正式开始</h3>
+
+<p>以whalesay镜像为例子说明。</p>
+
+<ol>
+<li>去<a href="https://hub.docker.com/">docker hub</a>网站上找到官方的whalesay镜像。</li>
+<li>查询到 <a href="https://hub.docker.com/r/docker/whalesay/">docker/whalesay</a> 这个镜像，打开，如下图所示，会给出如何使用的说明：
+<a href="/media/content/BlogPost/images/14637369611202.jpg" target="_blank"><img src="/media/content/BlogPost/images/14637369611202.jpg" alt="" style="max-width:100%;"></a>
+</li>
+<li>运行该镜像：<code>docker run docker/whalesay cowsay boo</code><br>
+</li>
+</ol>
+
+<pre><code>➜  ~ docker run docker/whalesay cowsay boo
+Unable to find image 'docker/whalesay:latest' locally
+latest: Pulling from docker/whalesay
+
+e190868d63f8: Pull complete
+909cd34c6fd7: Pull complete
+0b9bfabab7c1: Pull complete
+a3ed95caeb02: Pull complete
+00bf65475aba: Pull complete
+c57b6bcc83e3: Pull complete
+8978f6879e2f: Pull complete
+8eed3712d2cf: Pull complete
+Digest: sha256:178598e51a26abbc958b8a2e48825c90bc22e641de3d31e18aaf55f3258ba93b
+Status: Downloaded newer image for docker/whalesay:latest
+ _____
+&lt; boo &gt;
+ -----
+    \
+     \
+      \
+                    ##        .
+              ## ## ##       ==
+           ## ## ## ##      ===
+       /""""""""""""""""___/ ===
+  ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+       \______ o          __/
+        \    \        __/
+          \____\______/
+➜  ~
+</code></pre>
+
+<ol>
+<li>运行 <code>docker images</code>, 查看当前本机的镜像</li>
+</ol>
+
+<pre><code>➜  ~ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              14.04               90d5884b1ee0        2 weeks ago         188 MB
+hello-world         latest              94df4f0ce8a4        3 weeks ago         967 B
+docker/whalesay     latest              6b362a9f73eb        12 months ago       247 MB
+</code></pre>
+
+<h3>
+<a id="user-content-四-构建自己的image" class="anchor" href="#%E5%9B%9B-%E6%9E%84%E5%BB%BA%E8%87%AA%E5%B7%B1%E7%9A%84image" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>四. 构建自己的image</h3>
+
+<p>对于上面下载到本地的镜像whalesay，可能并不能满足我们的需求。我们如果想在这个基础上增加点内容，可以构建一个新的版本。</p>
+
+<h4>
+<a id="user-content-step-1-准备一个dockerfile文件" class="anchor" href="#step-1-%E5%87%86%E5%A4%87%E4%B8%80%E4%B8%AAdockerfile%E6%96%87%E4%BB%B6" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>step 1. 准备一个Dockerfile文件</h4>
+
+<pre><code>➜  mkdir mydockerbuild
+➜  cd mydockerbuild
+➜  mydockerbuild touch Dockerfile
+➜  mydockerbuild vim Dockerfile
+</code></pre>
+
+<p>输入内容如下：</p>
+
+<pre><code>FROM docker/whalesay:latest
+
+RUN apt-get -y update &amp;&amp; apt-get install -y fortunes
+
+CMD /usr/games/fortunes -a | cowsay
+</code></pre>
+
+<h4>
+<a id="user-content-step-2-build-image" class="anchor" href="#step-2-build-image" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>step 2. build image</h4>
+
+<ul>
+<li>运行命令： <code>docker build -t docker-whale .</code>
+</li>
+</ul>
+
+<pre><code>➜  mydockerbuild docker build -t docker-whale .
+Sending build context to Docker daemon 2.048 kB
+Step 1 : FROM docker/whalesay:latest
+ ---&gt; 6b362a9f73eb
+Step 2 : RUN apt-get -y update &amp;&amp; apt-get install -y fortunes
+ ---&gt; Running in f2875e6b6f60
+Ign http://archive.ubuntu.com trusty InRelease
+Get:1 http://archive.ubuntu.com trusty-updates InRelease [65.9 kB]
+Get:2 http://archive.ubuntu.com trusty-security InRelease [65.9 kB]
+Hit http://archive.ubuntu.com trusty Release.gpg
+......
+......
+Setting up fortunes-min (1:1.99.1-7) ...
+Setting up fortunes (1:1.99.1-7) ...
+Processing triggers for libc-bin (2.19-0ubuntu6.6) ...
+ ---&gt; a36f33cf5d93
+Removing intermediate container f2875e6b6f60
+Step 3 : CMD /usr/games/fortunes -a | cowsay
+ ---&gt; Running in 83a641a19c96
+ ---&gt; aa3bd0e8cf17
+Removing intermediate container 83a641a19c96
+Successfully built aa3bd0e8cf17
+</code></pre>
+
+<ul>
+<li>运行命令：<code>docker images</code>
+</li>
+</ul>
+
+<pre><code>docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+docker-whale        latest              aa3bd0e8cf17        6 minutes ago       274.5 MB
+ubuntu              14.04               90d5884b1ee0        2 weeks ago         188 MB
+hello-world         latest              94df4f0ce8a4        3 weeks ago         967 B
+docker/whalesay     latest              6b362a9f73eb        12 months ago       247 MB
+</code></pre>
+
+<ul>
+<li>运行这个images： <code>docker run docker-whale</code>
+</li>
+</ul>
+
+<h3>
+<a id="user-content-五-在docker-hub上创建自己的仓库" class="anchor" href="#%E4%BA%94-%E5%9C%A8docker-hub%E4%B8%8A%E5%88%9B%E5%BB%BA%E8%87%AA%E5%B7%B1%E7%9A%84%E4%BB%93%E5%BA%93" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>五. 在Docker hub上创建自己的仓库</h3>
+
+<p>在Docker Hub上注册一个账号，并创建一个仓库：
+<a href="/media/content/BlogPost/images/14637689877412.jpg" target="_blank"><img src="/media/content/BlogPost/images/14637689877412.jpg" alt="" style="max-width:100%;"></a></p>
+
+<h3>
+<a id="user-content-六-上传自己的image" class="anchor" href="#%E5%85%AD-%E4%B8%8A%E4%BC%A0%E8%87%AA%E5%B7%B1%E7%9A%84image" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>六. 上传自己的image</h3>
+
+<ul>
+<li>通过镜像ID打tag: <code>docker tag aa3bd0e8cf17 metaboy/docker-whale:latest</code>
+</li>
+</ul>
+
+<pre><code>➜  mydockerbuild docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+docker-whale        latest              aa3bd0e8cf17        6 minutes ago       274.5 MB
+ubuntu              14.04               90d5884b1ee0        2 weeks ago         188 MB
+hello-world         latest              94df4f0ce8a4        3 weeks ago         967 B
+docker/whalesay     latest              6b362a9f73eb        12 months ago       247 MB
+➜  mydockerbuild docker tag aa3bd0e8cf17 metaboy/docker-whale:latest
+➜  mydockerbuild docker
+ images
+REPOSITORY             TAG                 IMAGE ID            CREATED             SIZE
+docker-whale           latest              aa3bd0e8cf17        15 minutes ago      274.5 MB
+metaboy/docker-whale   latest              aa3bd0e8cf17        15 minutes ago      274.5 MB
+ubuntu                 14.04               90d5884b1ee0        2 weeks ago         188 MB
+hello-world            latest              94df4f0ce8a4        3 weeks ago         967 B
+docker/whalesay        latest              6b362a9f73eb        12 months ago       247 MB
+➜  mydockerbuild
+</code></pre>
+
+<ul>
+<li>使用command line登录到Docker hub：</li>
+</ul>
+
+<pre><code>➜  mydockerbuild docker login --username=metaboy --email=yxiong.wang@gmail.com
+Warning: '--email' is deprecated, it will be removed soon. See usage.
+Password:
+Login Succeeded
+</code></pre>
+
+<ul>
+<li>将镜像push到Docker hub仓库： docker push</li>
+</ul>
+
+<p>国内非常慢，我等不了最终的结果出来。一般使用这个命令就可以：</p>
+
+<pre><code>➜  mydockerbuild docker push metaboy/docker-whale
+The push refers to a repository [docker.io/metaboy/docker-whale]
+a7bc4a1132b8: Pushing [=========&gt;                                         ] 5.263 MB/27.5 MB
+......
+......
+</code></pre>
+
+<ul>
+<li>在用新镜像之前，我们先将whale相关的镜像删除：（名称和镜像id都可以满足）</li>
+</ul>
+
+<pre><code>➜  docker rmi -f aa3bd0e8cf17
+➜  docker rmi -f docker-whale
+</code></pre>
+
+<ul>
+<li>pull 你的新镜像：<code>docker run metaboy/docker-whale</code>
+</li>
+</ul>
