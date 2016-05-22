@@ -1,0 +1,58 @@
+<h1>
+<a id="user-content-基于idea-搭建的go开发环境" class="anchor" href="#%E5%9F%BA%E4%BA%8Eidea-%E6%90%AD%E5%BB%BA%E7%9A%84go%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>基于IDEA-搭建的go开发环境</h1>
+
+<p>现在Docker实在是太流行了，碰上现在工作中接触到很多docker相关的东西。深入了解docker也是非常有必要的。就像为了熟悉Rails就得学习Ruby一样，go语言学习是迈步过去的坎。</p>
+
+<p>下面是记录过程，在mac平台下，使用IDEA搭建GO语言的环境。(<em>初级入门，熟悉的同学不要继续往下看了</em>)</p>
+
+<h2>
+<a id="user-content-安装go-mac" class="anchor" href="#%E5%AE%89%E8%A3%85go-mac" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>安装go （mac）</h2>
+
+<ol>
+<li>mac用户，一般推荐使用brew安装软件。执行 <code>brew install go</code>
+</li>
+<li>配置环境变量：</li>
+</ol>
+
+<pre><code>export GOROOT=/usr/local/go
+export PATH=/usr/local/go/bin:$PATH
+</code></pre>
+
+<h2>
+<a id="user-content-idea整合go-idea" class="anchor" href="#idea%E6%95%B4%E5%90%88go-idea" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>IDEA整合Go （IDEA）</h2>
+
+<ul>
+<li>通过plugin manager，安装go插件。如下图，搜索出来的结果：</li>
+</ul>
+
+<p><a href="/media/content/BlogPost/images/14638228590190.jpg" target="_blank"><img src="/media/content/BlogPost/images/14638228590190.jpg" alt="" style="max-width:100%;"></a>￼</p>
+
+<ul>
+<li>重启IDEA，新建一个go project。配置go sdk。 通过project structure检查sdk。
+<a href="/media/content/BlogPost/images/14638505606335.jpg" target="_blank"><img src="/media/content/BlogPost/images/14638505606335.jpg" alt="" style="max-width:100%;"></a>￼</li>
+</ul>
+
+<h2>
+<a id="user-content-来一个简单的helloworld" class="anchor" href="#%E6%9D%A5%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84helloworld" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>来一个简单的helloworld</h2>
+
+<ul>
+<li>简单的代码：</li>
+</ul>
+
+<pre><code>package main
+
+import "fmt"
+
+func main() {
+    fmt.Printf("--------Hello, world; ----------")
+}
+</code></pre>
+
+<ul>
+<li><p>运行效果如下：
+<a href="/media/content/BlogPost/images/14638510873693.jpg" target="_blank"><img src="/media/content/BlogPost/images/14638510873693.jpg" alt="" style="max-width:100%;"></a>￼</p></li>
+<li><p>注意gosample运行配置，需要指定main文件：
+<a href="/media/content/BlogPost/images/14638512029126.jpg" target="_blank"><img src="/media/content/BlogPost/images/14638512029126.jpg" alt="" style="max-width:100%;"></a>￼</p></li>
+</ul>
+
+<p>docker源码也是基于IDEA进行开发的，所有从github上将源码clone下来阅读，体验也是很不错的。</p>
