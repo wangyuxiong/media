@@ -1,0 +1,175 @@
+<h2>
+<a id="user-content-拉链表的简单介绍" class="anchor" href="#%E6%8B%89%E9%93%BE%E8%A1%A8%E7%9A%84%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>拉链表的简单介绍</h2>
+
+<p>数据仓库保留了大量的历史数据，对时间维度上的数据分析工作提供了重要的手段。而保留历史数据的最常见的方法就是使用历史拉链表，历史拉链表仅当数据发送变更时，才相应的发生变更，这样就能有效保留历史数据的变动信息，又不会浪费存储空间。</p>
+
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>dw_start_date</th>
+<th>dw_end_date</th>
+<th>dw-state</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>metaboy</td>
+<td>20120101</td>
+<td>20120131</td>
+<td>R(休假）</td>
+</tr>
+<tr>
+<td>metaboy</td>
+<td>20120131</td>
+<td>20120201</td>
+<td>T(路途)</td>
+</tr>
+<tr>
+<td>metaboy</td>
+<td>20120201</td>
+<td>30001231</td>
+<td>W(工作)</td>
+</tr>
+</tbody>
+</table>
+
+<p>上面每一条记录都不算末尾的，比如20120131，此时我的状态应该是在途中，而不是在休假中。所以最后一条记录状态到目前都未改变，一直都处在工作状态。这种算法也叫算头不算尾。</p>
+
+<h3>
+<a id="user-content-拉链算法" class="anchor" href="#%E6%8B%89%E9%93%BE%E7%AE%97%E6%B3%95" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>拉链算法</h3>
+
+<ol>
+<li>采集当日全量数据到ND(NewDay)表；</li>
+<li>可从历史表中取出昨日全量数据存储到OD(OldDay)表;</li>
+<li>(ND-OD)就是当日新增和变化的数据，也就是当天的增量，用W_I表示；</li>
+<li>(OD-ND)为状态到此结束需要封链的数据，用W_U表示；</li>
+<li>将W_I表的内容全部插入到历史表中，这些是新增记录，start_date为当天，而end_date为max值；</li>
+<li>对历史表进行W_U部份的更新操作，start_date保持不变，而end_date改为当天，也就是关链操作；</li>
+</ol>
+
+<h3>
+<a id="user-content-拉链记历史的一些说明" class="anchor" href="#%E6%8B%89%E9%93%BE%E8%AE%B0%E5%8E%86%E5%8F%B2%E7%9A%84%E4%B8%80%E4%BA%9B%E8%AF%B4%E6%98%8E" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>拉链记历史的一些说明</h3>
+
+<h4>
+<a id="user-content-1初始化数据导致拉链重复" class="anchor" href="#1%E5%88%9D%E5%A7%8B%E5%8C%96%E6%95%B0%E6%8D%AE%E5%AF%BC%E8%87%B4%E6%8B%89%E9%93%BE%E9%87%8D%E5%A4%8D" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1.初始化数据导致拉链重复</h4>
+
+<p>Offer当前数据出现漏和错数据的情况，为了修复数据，采用从前台拉一次全量数据初始化的历史表。在初始化过程是：将全量数据初始化替换进入P30001231这个分区，将DW_BEING_DATE初始化为GMT_CREATE。</p>
+
+<p>这种做法造成GMT_CREATE与之前存在的历史数据拉链重复。正确的做法应该是，将抽取的全量数据与历史表的P30001231分区数据左关联，如果存在则取P30001231分区的DW_BEGIN_DATE,如果不存在，则取当前的数据日期。</p>
+
+<h4>
+<a id="user-content-2采用gp记历史脚本回滚历史出现拉链重复" class="anchor" href="#2%E9%87%87%E7%94%A8gp%E8%AE%B0%E5%8E%86%E5%8F%B2%E8%84%9A%E6%9C%AC%E5%9B%9E%E6%BB%9A%E5%8E%86%E5%8F%B2%E5%87%BA%E7%8E%B0%E6%8B%89%E9%93%BE%E9%87%8D%E5%A4%8D" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.采用GP记历史脚本回滚历史出现拉链重复</h4>
+
+<p>Offer数据某天漏了数据，为了追回历史数据，直接采用历史程序回滚的方法回滚历史。但回滚的时候没有删除回滚时间之后的历史数据。导致很明细数据又出现了重复的拉链。</p>
+
+<p><strong>==当前数据为==：</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>OFFER_ID</th>
+<th>DW_BEGIN_DATE</th>
+<th>DW_END_DATE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2010-11-1</td>
+<td>2010-11-4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-4</td>
+<td>2010-11-5</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-5</td>
+<td>2010-11-7</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-7</td>
+<td>3000-12-31</td>
+</tr>
+</tbody>
+</table>
+
+<p>==下面回滚2010-11-4的数据后，数据变成：==</p>
+
+<table>
+<thead>
+<tr>
+<th>OFFER_ID</th>
+<th>DW_BEGIN_DATE</th>
+<th>DW_END_DATE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2010-11-1</td>
+<td>2010-11-4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-4</td>
+<td>2010-12-31</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-5</td>
+<td>2010-11-7</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2010-11-7</td>
+<td>3000-12-31</td>
+</tr>
+</tbody>
+</table>
+
+<p>拉链表数据获取</p>
+
+<pre><code>SELECT * 
+FROM evt_order_hist
+WHERE start_dt &lt;= DATE ‘2010-01-02’ AND
+        end_dt &gt; DATE ‘2010-01-02’ AND
+order_id = ‘20100102’;
+</code></pre>
+
+<h3>
+<a id="user-content-拉链表的checklist" class="anchor" href="#%E6%8B%89%E9%93%BE%E8%A1%A8%E7%9A%84checklist" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>拉链表的checklist:</h3>
+
+<ul>
+<li><p><em>数据是否存在重复</em>
+检出处理过数据的分区是否存在重复记录。</p></li>
+<li><p><em>数据是否有断裂检查</em></p></li>
+</ul>
+
+<pre><code>select t1.*
+from  tb_h t1
+left outer join tb_h t2
+on t1.id=t2.id
+and t1.dw_end_date=t2.dw_begin_date
+where t1.dw_status &lt;&gt; ‘D’
+and t1.dw_end_date&lt; timestamp ‘30001231 23:59:59′
+and t2.id is null
+and t1.dw_end_date&gt;(处理过数据的日期)
+limit 1;
+</code></pre>
+
+<ul>
+<li><em>数据是否有拉链重复</em></li>
+</ul>
+
+<pre><code>select t1.*
+from  tb_h t1
+inner join tb_h t2
+on t1.id=t2.id
+where t2.dw_begin_date&lt;t1.dw_end_date
+and t2.dw_begin_date&gt;=t1.dw_begin_date
+and not (t2.dw_begin_date=t1.dw_begin_date and t2.dw_end_date=t1.dw_end_date)
+</code></pre>
