@@ -1,0 +1,90 @@
+<h1>
+<a id="user-content-关于子查询和连接的趣味小题目" class="anchor" href="#%E5%85%B3%E4%BA%8E%E5%AD%90%E6%9F%A5%E8%AF%A2%E5%92%8C%E8%BF%9E%E6%8E%A5%E7%9A%84%E8%B6%A3%E5%91%B3%E5%B0%8F%E9%A2%98%E7%9B%AE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>关于子查询和连接的趣味小题目</h1>
+
+<p>今天有位同学出来一个趣味小题。</p>
+
+<pre><code>A：
+select title
+from simplified
+where id in (select id
+             from analysis
+             where word = ‘something’);
+B：
+select b.title
+from  analysis a
+join simplified b
+on (a.id=b.id)
+where a.word=’something’;
+
+C：
+select simplified.title
+from  analysis
+join simplified
+on (analysis.id=simplified.id)
+where analysi.word=’something’;
+</code></pre>
+
+<p><strong>==上面的3段sql，在MYSQL中执行，哪一个效率最优，请讲出原因?==</strong></p>
+
+<p>看到这个问题，我想起了之前作面试官的时候，也问过这里的问题。从另一个角度，我收集了大家面对这题目的时候一些思考，总结成下面的一个面试小故事。</p>
+
+<p>这类题目真得蛮适合面试的时候考察对sql的掌握程度。</p>
+
+<p>模拟一个场景，面试者：小白，面试官：小二，下面开始这段面试过程......</p>
+
+<p>小二：...... 我这里有个小问题，你看看(给出上面3段sql)，balabala......</p>
+
+<p>小白：这2个表数据量如何了，join ，子查询的优化根据数据量可能还有所不一样吧。子查询适合外结果集大，子查询结果集小的情况，最好是能保证子查询所返回的结果集尽量的小。</p>
+
+<p>小二：假设2表，数据量差不多，都是万条记录左右。</p>
+
+<p>小白：如果是这种的话，A应该会慢一点吧。 如果是在mysql上执行的话，A中子查询语句会认为与外面的simolified表进行关联比较有效率。这样的话A其实就回被翻译成：</p>
+
+<p><code>select title from simplified where exists (select simplified.title from analysis where word= ‘something’ and id =simplified .id);</code></p>
+
+<p>这种in子查询的形式，在外部表（比如上面的simplified ）数据量较大的时候效率是很差的.</p>
+
+<p>小二: 恩，那么B和C之间有什么区别呢？</p>
+
+<p>小白：B和C在我看来，应该是差不多的，其主要区别就是B采用了别名。但是我认为应该是没多大影响的。 </p>
+
+<p>因为数据库本身执行时，都会再把表名给换成自己的别名。但我影响中好像记得有一条数据库的优化建议是尽量多表连接，最好是使用表的别名来引用列。</p>
+
+<p>对了，有对id建索引吧。</p>
+
+<p>小二: 2表id都是主键，这算是建了索引吗？</p>
+
+<p>小白: 是的，主键可以保证记录的唯一和主键域非空,数据库管理系统对于主键自动生成唯一索引，所以主键也是一个特殊的索引。</p>
+
+<p>小二:  恩，一张表只能有一个主键，是不是就可以说只能有一个唯一的索引呢？</p>
+
+<p>小白:  不对，主键一定是唯一性索引，唯一性索引并不一定就是主键，主键就是能够唯一标识表中某一行的属性或属性组，一个表只能有一个主键，但可以有多个候选索引。</p>
+
+<p>小二: 主键列和唯一索引列还有区别吗？</p>
+
+<p>小白：应该有，我知道的主键列不允许空值，而唯一性索引列允许空值。一个表中可以有多个唯一性索引，但只能有一个主键。</p>
+
+<p>小二: 恩，回到上面的问题，你记得多表连接，最好使用表的别名来引用列，哪你有想过会是什么原因导致的呢？</p>
+
+<p>小白：我估计应该是Mysql内部处理逻辑有关吧，有可能是使用了别名，就会再建一个临时表放入内存，这样后面的命中会更高。</p>
+
+<p>小二:  差不多吧，mysql引擎自动生成temp表，造成缓存的效果。从这个sql，你大致应该能明白它的意图了，你想想有没有更优的写法，可以试试看…</p>
+
+<p>小白: 好的，我想想…..</p>
+
+<p>小白:  </p>
+
+<p>```select b.title from
+(select id from  analysis where word=’something’)a,
+ simplified b
+where a.id=b.id;</p>
+
+<pre><code>
+如果这么去写，应该是最快的。放弃子查询和join。
+
+小二: 恩，不错.......
+
+.......
+
+如果我在面试中碰到这样的小白，绝对会留下深刻的影响。
+</code></pre>
