@@ -1,0 +1,49 @@
+<h1>
+<a id="user-content-git-rebase避免无谓的merge" class="anchor" href="#git-rebase%E9%81%BF%E5%85%8D%E6%97%A0%E8%B0%93%E7%9A%84merge" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>git rebase，避免无谓的merge</h1>
+
+<p>最近一个项目，我们有这么一个场景：</p>
+
+<blockquote>
+<p>有3台服务，server a,b,c。当我们在a上add文件并push到git server，然后通知server b,c去本地更新自己的本地仓库，并将3台server上最终的指针同步到ZK上，当3台server上的指针满足2台以上为最新的指针的时候，就认为这次操作成功。</p>
+</blockquote>
+
+<p>但在实际操作中，会发现很难出现指针一致的情况，一般会出现3个不一样的指针，具体如下：</p>
+
+<pre><code>server  a: current  head  :  aaaaa  —&gt;  add   -&gt; commit —&gt; push —&gt; last head: abcde
+server  b: current  head  :  aaaaa  —&gt;  pull  —&gt; (head: abc —-&gt; last head : ddddd)
+Server  c: current  head  :  aaaaa  —&gt;  pull  —&gt; (head: abc —-&gt; last head : eeeee)
+</code></pre>
+
+<p>通过观察server b和c上的git log，会发现这样一个现象：server b和c在进行pull操作，一般会先讲git server上最新指针拉到本地，但随后又会主动做一个merge操作，并产生新的指针，而这一次merge操作其实没有任何意义，<em>gitpull为什么会有这样的一个操作？</em></p>
+
+<p>git pull在设计之初，它的行为就是将远端的仓库和本地仓库进行合并，这种就是类似与将2个同名称的branch做merge，但如果这2个branch是完全同步的，那么，这个merge动作就没有任何的意义，也会导致我们上面的这个项目中一致性需求难以满足。</p>
+
+<p>在本地测试了下，发现可以使用gitfetch + gitrebase来解决这个问题：</p>
+
+<p>原来使用gitpull的做法：</p>
+
+<pre><code>Git git = gitInit(localPath);
+PullResult pullResult;
+try {
+    pullResult = git.pull().call();
+} catch (GitAPIException e) {
+    logger.error(GIT_API_ERROR + “, pull Exception”, e);
+}
+</code></pre>
+
+<p>使用rebase之后的做法:</p>
+
+<pre><code>RebaseResult rebaseResult;
+try {            
+    Git git = gitInit(localPath);
+    fetch(localPath);   
+    ObjectId head = git.getRepository().getRefDatabase().getRef(“refs/remotes/origin/” + branch).getObjectId(); 
+    rebaseResult = git.rebase().setUpstream(head).call();
+ } catch (Exception e) { 
+    logger.error(GIT_API_ERROR + “, rebase Exception”, e);
+}
+</code></pre>
+
+<p>参考：
+<strong>git-rebase Manual Page</strong> : <a href="https://www.kernel.org/pub/software/scm/git/docs/git-rebase.html">https://www.kernel.org/pub/software/scm/git/docs/git-rebase.html</a>
+<strong>使用git rebase避免无谓的merge</strong> : <a href="http://ihower.tw/blog/archives/3843">http://ihower.tw/blog/archives/3843</a></p>
