@@ -1,0 +1,302 @@
+<h1>
+<a id="user-content-docker-基础知识储备-二--dockerfile" class="anchor" href="#docker-%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86%E5%82%A8%E5%A4%87-%E4%BA%8C--dockerfile" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Docker 基础知识储备 （二）- Dockerfile</h1>
+
+<p>使用Dockerfile创建自定义的镜像。</p>
+
+<h2>
+<a id="user-content-基本结构" class="anchor" href="#%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>基本结构</h2>
+
+<p>Dockerfile由一行行命令语句组成，支持# 开头的注释行</p>
+
+<p>四部分： 基础镜像信息，维护者信息，镜像操作指令和容器启动时执行的指令。</p>
+
+<p>example:</p>
+
+<pre><code># This dockerfile uses the ubuntu image
+# VERSION 2 - EDITION 1
+# Author: docker_user
+# Command format: Instruction [arguments / command] ..
+
+# Base image to use, this must be set as the first line
+FROM ubuntu
+
+# Maintainer: docker_user &lt;docker_user at email.com&gt; (@docker_user)
+MAINTAINER docker_user docker_user@email.com
+
+# Commands to update the image
+RUN echo "deb http://archive.ubuntu.com/ubuntu/ raring main universe" &gt;&gt; /etc/apt/sources.list
+RUN apt-get update &amp;&amp; apt-get install -y nginx
+RUN echo "\ndaemon off;" &gt;&gt; /etc/nginx/nginx.conf
+
+# Commands when creating a new container
+CMD /usr/sbin/nginx
+</code></pre>
+
+<h2>
+<a id="user-content-指令" class="anchor" href="#%E6%8C%87%E4%BB%A4" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>指令</h2>
+
+<h3>
+<a id="user-content-from" class="anchor" href="#from" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>FROM</h3>
+
+<p><strong>格式：</strong><code>FROM image or  FROM image:tag</code>
+<strong>注意：</strong>第一条指令必须是 FROM 指令。一个Dockerfile中创建多个镜像，可以使用多个FROM指令。</p>
+
+<h3>
+<a id="user-content-maintainer" class="anchor" href="#maintainer" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>MAINTAINER</h3>
+
+<p><strong>格式：</strong> <code>MAINTAINER name</code></p>
+
+<h3>
+<a id="user-content-run" class="anchor" href="#run" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>RUN</h3>
+
+<p><strong>格式：</strong> <code>RUN command or RUN ["executable","param1","param2"]</code>
+<strong>注意：</strong> RUN command 是在shell终端运行命令，即 /bin/sh -c;</p>
+
+<h3>
+<a id="user-content-cmd" class="anchor" href="#cmd" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CMD</h3>
+
+<p><strong>格式：</strong> </p>
+
+<ul>
+<li>
+<code>CMD ["executable","param1","param2"]</code>  使用  exec  执行，推荐方式</li>
+<li>
+<code>CMD command param1 param2</code>  在  /bin/sh  中执行，提供给需要交互的应用</li>
+<li>
+<code>CMD ["param1","param2"]</code>  提供给  ENTRYPOINT  的默认参数</li>
+</ul>
+
+<p>** 注意：** 指定启动容器时执行的命令，每个 Dockerfile 只能有一条  CMD  命令。如果指定了多条命令，只有最后一条会被执行。</p>
+
+<h3>
+<a id="user-content-expose" class="anchor" href="#expose" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>EXPOSE</h3>
+
+<p><strong>格式：</strong> <code>EXPOSE &lt;port&gt; [&lt;port&gt;...]</code>
+<strong>注意：</strong>告诉 Docker 服务端容器暴露的端口号，供互联系统使用。在启动容器时需要通过 -P，Docker 主机会自动分配一个端口转发到指定的端口。</p>
+
+<h3>
+<a id="user-content-env" class="anchor" href="#env" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>ENV</h3>
+
+<p><strong>格式：</strong> <code>ENV &lt;key&gt; &lt;value&gt;</code>
+<strong>注意：</strong>指定一个环境变量，会被后续  RUN  指令使用，并在容器运行时保持</p>
+
+<h3>
+<a id="user-content-add" class="anchor" href="#add" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>ADD</h3>
+
+<p><strong>格式：</strong> <code>ADD &lt;src&gt; &lt;dest&gt;</code>
+<strong>注意：</strong>该命令将复制指定的    到容器中的  .其中    可以是Dockerfile所在目录的一个相对路径；也可以是一个 URL；还可以是一个 tar 文件（自动解压为目录）。</p>
+
+<h3>
+<a id="user-content-copy" class="anchor" href="#copy" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>COPY</h3>
+
+<p><strong>格式：</strong> <code>COPY &lt;src&gt; &lt;dest&gt;</code>
+<strong>注意：</strong> 复制本地主机的   （为 Dockerfile 所在目录的相对路径）到容器中的   .当使用本地目录为源目录时，推荐使用  COPY </p>
+
+<h3>
+<a id="user-content-entrypoint" class="anchor" href="#entrypoint" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>ENTRYPOINT</h3>
+
+<p><strong>格式：</strong></p>
+
+<ul>
+<li><code>ENTRYPOINT ["executable", "param1", "param2"]</code></li>
+<li>
+<code>ENTRYPOINT command param1 param2</code> （shell中执行）</li>
+</ul>
+
+<p>注：配置容器启动后执行的命令，并且不可被  docker run  提供的参数覆盖。每个 Dockerfile 中只能有一个  ENTRYPOINT ，当指定多个时，只有最后一个起效。</p>
+
+<h3>
+<a id="user-content-volume" class="anchor" href="#volume" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>VOLUME</h3>
+
+<p><strong>格式：</strong> <code>VOLUME ["/data"]</code>
+<strong>注意：</strong>创建一个可以从本地主机或其他容器挂载的挂载点，一般用来存放数据库和需要保持的数据等</p>
+
+<h3>
+<a id="user-content-user" class="anchor" href="#user" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>USER</h3>
+
+<p><strong>格式：</strong> <code>USER daemon</code>
+<strong>注意：</strong>指定运行容器时的用户名或 UID，后续的  RUN  也会使用指定用户。
+当服务不需要管理员权限时，可以通过该命令指定运行用户。并且可以在之前创建所需要的用户，例如： <code>RUN groupadd -r postgres &amp;&amp; useradd -r -g postgres postgres</code> 。要临时获取管理员权限可以使用  gosu ，而不推荐  sudo </p>
+
+<h3>
+<a id="user-content-workdir" class="anchor" href="#workdir" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>WORKDIR</h3>
+
+<p><strong>格式：</strong> <code>WORKDIR /path/to/workdir</code>
+<strong>注意：</strong>为后续的  RUN 、 CMD 、 ENTRYPOINT  指令配置工作目录。如：</p>
+
+<pre><code>WORKDIR /a
+WORKDIR b
+WORKDIR c
+RUN pwd
+</code></pre>
+
+<p>则最终路径为 <code>/a/b/c</code> 。</p>
+
+<h3>
+<a id="user-content-onbuild" class="anchor" href="#onbuild" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>ONBUILD</h3>
+
+<p><strong>格式：</strong> <code>ONBUILD [INSTRUCTION]</code>
+<strong>注意：</strong> 配置当所创建的镜像作为其它新创建镜像的基础镜像时，所执行的操作指令。
+Dockerfile 使用如下的内容创建了镜像  image-A 。</p>
+
+<pre><code>[...]
+ONBUILD ADD . /app/src
+ONBUILD RUN /usr/local/bin/python-build --dir /app/src
+[...]
+</code></pre>
+
+<p>基于 image-A 创建新的镜像时，新的Dockerfile中使用  FROM image-A 指定基础镜像时，会自动执行  ONBUILD  指令内容，等价于在后面添加了两条指令。</p>
+
+<pre><code>FROM image-A
+
+#Automatically run the following
+ADD . /app/src
+RUN /usr/local/bin/python-build --dir /app/src
+
+</code></pre>
+
+<h2>
+<a id="user-content-创建镜像" class="anchor" href="#%E5%88%9B%E5%BB%BA%E9%95%9C%E5%83%8F" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>创建镜像</h2>
+
+<p><strong>格式：</strong><code>docker build [选项] 路径</code>
+<strong>注意：</strong></p>
+
+<ul>
+<li>该命令将读取指定路径下的dockerfile，并将内容发送给docker服务端，由服务端来创建镜像。</li>
+<li>可以通过  .dockerignore  文件（每一行添加一条匹配模式）来让 Docker 忽略路径下的目录和文件。</li>
+<li>要指定镜像的标签信息，可以通过  -t  选项。如 <code>sudo docker build -t myrepo/myapp /tmp/test1/</code>
+</li>
+</ul>
+
+<h2>
+<a id="user-content-最佳实践" class="anchor" href="#%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>最佳实践</h2>
+
+<h3>
+<a id="user-content-1使用缓存" class="anchor" href="#1%E4%BD%BF%E7%94%A8%E7%BC%93%E5%AD%98" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1、使用缓存</h3>
+
+<p>Dockerfile的每条指令都会将结果提交为新的镜像，下一个指令将会基于上一步指令的镜像的基础上构建，如果一个镜像存在相同的父镜像和指令（除了ADD），Docker将会使用镜像而不是执行该指令，即缓存。
+为了有效地利用缓存，你需要保持你的Dockerfile一致，并且尽量在末尾修改。所以，我们应该使用常用且不变的Dockerfile开始指令来利用缓存。</p>
+
+<p><strong>example：</strong></p>
+
+<pre><code>FROM ubuntu
+MAINTAINER Michael Crosby &lt;michael@crosbymichael.com&gt;
+RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" &gt; /etc/apt/sources.list
+RUN apt-get update
+......
+</code></pre>
+
+<h3>
+<a id="user-content-2使用标签" class="anchor" href="#2%E4%BD%BF%E7%94%A8%E6%A0%87%E7%AD%BE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2、使用标签</h3>
+
+<p>始终通过-t标记来构建镜像,一个简单的可读标签将帮助你管理每个创建的镜像。</p>
+
+<p><code>docker build -t="metaboy/dockertest" .</code></p>
+
+<h3>
+<a id="user-content-3公开端口" class="anchor" href="#3%E5%85%AC%E5%BC%80%E7%AB%AF%E5%8F%A3" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3、公开端口</h3>
+
+<p>在Dockerfile中你有能力映射私有和公有端口，但是你永远不要通过Dockerfile映射公有端口。通过映射公有端口到主机上，你将只能运行一个容器化应用程序实例。</p>
+
+<h3>
+<a id="user-content-4cmd与entrypoint的语法" class="anchor" href="#4cmd%E4%B8%8Eentrypoint%E7%9A%84%E8%AF%AD%E6%B3%95" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4、CMD与ENTRYPOINT的语法</h3>
+
+<p>使用CMD和ENTRYPOINT时，请务必使用数组语法.它执行的命令完全像你期望的那样.</p>
+
+<h3>
+<a id="user-content-5cmd和entrypoint-结合使用更好" class="anchor" href="#5cmd%E5%92%8Centrypoint-%E7%BB%93%E5%90%88%E4%BD%BF%E7%94%A8%E6%9B%B4%E5%A5%BD" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>5、CMD和ENTRYPOINT 结合使用更好</h3>
+
+<p>docker run命令中的参数都会传递给ENTRYPOINT指令，而不用担心它被覆盖（跟CMD不同）。当与CMD一起使用时ENTRYPOINT的表现会更好。让我们来研究一下我的Rethinkdb Dockerfile，看看如何使用它。</p>
+
+<pre><code>＃Dockerfile for Rethinkdb 
+＃http://www.rethinkdb.com/
+
+FROM ubuntu
+
+MAINTAINER Michael Crosby &lt;michael@crosbymichael.com&gt;
+
+RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" &gt; /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get upgrade -y
+
+RUN apt-get install -y python-software-properties
+RUN add-apt-repository ppa:rethinkdb/ppa
+RUN apt-get update
+RUN apt-get install -y rethinkdb
+
+＃Rethinkdb process
+EXPOSE 28015
+＃Rethinkdb admin console
+EXPOSE 8080
+
+＃Create the /rethinkdb_data dir structure
+RUN /usr/bin/rethinkdb create
+
+ENTRYPOINT ["/usr/bin/rethinkdb"]
+
+CMD ["--help"]
+</code></pre>
+
+<p>当ENTRYPOINT指令出现时，我们知道每次运行该镜像，在docker run过程中传递的所有参数将成为ENTRYPOINT（/usr/bin/rethinkdb）的参数。</p>
+
+<p>在Dockerfile中我还设置了一个默认CMD参数--help。这样做是为了docker run期间如果没有参数的传递，rethinkdb将会给用户显示默认的帮助文档。这是你所期望的与rethinkdb交互相同的功能。</p>
+
+<h3>
+<a id="user-content-6不要开机初始化" class="anchor" href="#6%E4%B8%8D%E8%A6%81%E5%BC%80%E6%9C%BA%E5%88%9D%E5%A7%8B%E5%8C%96" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>6、不要开机初始化</h3>
+
+<p>容器模型是进程而不是机器.不需要开机初始化。</p>
+
+<h3>
+<a id="user-content-7可信任构建" class="anchor" href="#7%E5%8F%AF%E4%BF%A1%E4%BB%BB%E6%9E%84%E5%BB%BA" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>7、可信任构建</h3>
+
+<h3>
+<a id="user-content-8不在构建中升级版本" class="anchor" href="#8%E4%B8%8D%E5%9C%A8%E6%9E%84%E5%BB%BA%E4%B8%AD%E5%8D%87%E7%BA%A7%E7%89%88%E6%9C%AC" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>8、不在构建中升级版本</h3>
+
+<p>更新将发生在基础镜像里，你不需要在你的容器内来apt-get upgrade更新。因为在隔离情况下，如果更新时试图修改 init 或改变容器内的设备，更新可能会经常失败。它还可能会产生不一致的镜像。</p>
+
+<h3>
+<a id="user-content-9使用小型基础镜像" class="anchor" href="#9%E4%BD%BF%E7%94%A8%E5%B0%8F%E5%9E%8B%E5%9F%BA%E7%A1%80%E9%95%9C%E5%83%8F" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>9、使用小型基础镜像</h3>
+
+<h3>
+<a id="user-content-10使用特定的标签" class="anchor" href="#10%E4%BD%BF%E7%94%A8%E7%89%B9%E5%AE%9A%E7%9A%84%E6%A0%87%E7%AD%BE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>10、使用特定的标签</h3>
+
+<p>Dockerfile 中FROM应始终包含依赖的基础镜像的完整仓库名和标签。比如说FROM debian:jessie而不仅仅是FROM debian。</p>
+
+<h3>
+<a id="user-content-11常见指令组合" class="anchor" href="#11%E5%B8%B8%E8%A7%81%E6%8C%87%E4%BB%A4%E7%BB%84%E5%90%88" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>11、常见指令组合</h3>
+
+<p>您的apt-get update应该与apt-get install组合。此外，你应该采取\的优势使用多行来进行安装。谨记层和缓存都是不错的。不要害怕过多的层，因为缓存是大救星。当然，你应当尽量使用上游的包。</p>
+
+<h3>
+<a id="user-content-12使用自己的基础镜像" class="anchor" href="#12%E4%BD%BF%E7%94%A8%E8%87%AA%E5%B7%B1%E7%9A%84%E5%9F%BA%E7%A1%80%E9%95%9C%E5%83%8F" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>12、使用自己的基础镜像</h3>
+
+<h2>
+<a id="user-content-dockerfile语法检测和优化工具" class="anchor" href="#dockerfile%E8%AF%AD%E6%B3%95%E6%A3%80%E6%B5%8B%E5%92%8C%E4%BC%98%E5%8C%96%E5%B7%A5%E5%85%B7" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>dockerfile语法检测和优化工具</h2>
+
+<p>之前有一个在线Dockerfile语法检测的网站，给出的建议都还不错。</p>
+
+<blockquote>
+<ul>
+<li>要使用 tag，但不要 latest。</li>
+<li>Debian 挺好的，不要总 Ubuntu。</li>
+<li>apt-get update 在前，rm -rf /var/lib/apt/lists/* 在后。</li>
+<li>yum install，不忘 yum clean。</li>
+<li>多 RUN 要合并，来减少层数。</li>
+<li>无用的软件，不要乱安装。</li>
+<li>COPY 放最后，缓存很开心。</li>
+<li>善用 dockerignore，不浪费传输。</li>
+<li>不忘 MAINTAINER，这都是我的</li>
+</ul>
+</blockquote>
+
+<h2>
+<a id="user-content-备注" class="anchor" href="#%E5%A4%87%E6%B3%A8" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>备注</h2>
+
+<ul>
+<li>Dockerfile最佳实践: <a href="http://dockone.io/article/131">http://dockone.io/article/131</a>
+</li>
+<li>推荐一个在线 Dockerfile 语法检查优化工具: <a href="http://dockone.io/article/854">http://dockone.io/article/854</a>
+</li>
+<li>Docker —— 从入门到实践: <a href="https://yeasy.gitbooks.io/docker_practice/content/">https://yeasy.gitbooks.io/docker_practice/content/</a>
+</li>
+</ul>
