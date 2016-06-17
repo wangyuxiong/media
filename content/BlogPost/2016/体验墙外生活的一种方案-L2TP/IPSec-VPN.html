@@ -1,0 +1,209 @@
+<h1>
+<a id="user-content-在-ubuntu上搭建-l2tpipsec-vpn" class="anchor" href="#%E5%9C%A8-ubuntu%E4%B8%8A%E6%90%AD%E5%BB%BA-l2tpipsec-vpn" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>在 Ubuntu上搭建 L2TP/IPSec VPN</h1>
+
+<p>Linode使用有一段时间了，上面一直都搭着PPTP作为翻墙VPN，实际上使用蛮少的。最近想躺在床上就可以通过ipad翻墙看看新闻，但是查了下方法，大家都一直建议使用L2TP/IPSec VPN。 </p>
+
+<p>翻阅了不少人博客上的搭建方法，本来以为蛮简单的一个事情，还是折腾了2个晚上才搞定。我试着记录下这次折腾的步骤，或许可以减少大家的误操作。</p>
+
+<p>我搭建的基础环境如下：</p>
+
+<blockquote>
+<p>Linode VPS
+Ubuntu Server 12.04
+以 root 用户登录</p>
+</blockquote>
+
+<h3>
+<a id="user-content-1-l2tpipsec扫盲" class="anchor" href="#1-l2tpipsec%E6%89%AB%E7%9B%B2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1. L2TP/IPSec扫盲</h3>
+
+<p>L2TP/IPSec 就是 L2TP over IPSec：L2TP Over IPSec VPN是将L2TP 协议和IPSec 协议结合使用，利用L2TP协议对用户进行认证并分配内网IP地址，利用IPSec协议对通信进行加密，提供整体的point-to-site VPN解决方案。</p>
+
+<p>有兴趣可以去看看<a href="https://www.google.com.hk/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=2&amp;ved=0CDAQFjAB&amp;url=%68%74%74%70%3a%2f%2f%77%77%77%2e%68%69%6c%6c%73%74%6f%6e%65%6e%65%74%2e%63%6f%6d%2e%63%6e%2f%64%6f%77%6e%2f%70%64%66%2f%48%69%6c%6c%73%74%6f%6e%65%5f%4c%32%54%50%5f%4f%76%65%72%5f%49%50%53%65%63%5f%56%50%4e%2e%70%64%66&amp;ei=T59PU9SjOumSiQfy8IH4BA&amp;usg=AFQjCNENoe3H5GH4-yFo0c-mDu7txk0wRQ&amp;sig2=4tb7De6swnCk2iNXzld11A">Hillstone L2TP Over IPSec VPN</a>技术解决方案白皮书， 不清楚也不影响后面的搭建。</p>
+
+<h3>
+<a id="user-content-2-ipsec的部署" class="anchor" href="#2-ipsec%E7%9A%84%E9%83%A8%E7%BD%B2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2. IPSec的部署</h3>
+
+<h4>
+<a id="user-content-21-安装ipsec" class="anchor" href="#21-%E5%AE%89%E8%A3%85ipsec" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.1 安装IPSec</h4>
+
+<p>一般都是通过使用openswan来实现IPSec，网上流传了很多自己编译源码的步骤，但是我试了下，貌似还是有问题，所以还是简单点，直接使用最新的发行包安装就行。</p>
+
+<pre><code>apt-get install openswan
+</code></pre>
+
+<h4>
+<a id="user-content-22-修改ipsec配置文件etcipsecconf" class="anchor" href="#22-%E4%BF%AE%E6%94%B9ipsec%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6etcipsecconf" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.2 修改IPSec配置文件/etc/ipsec.conf</h4>
+
+<pre><code>config setup
+    nat_traversal=yes
+    virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12
+    oe=off
+    protostack=netkey
+
+conn %default
+    forceencaps=yes
+
+conn L2TP-PSK-NAT
+    rightsubnet=vhost:%no,%priv
+    also=L2TP-PSK-noNAT
+
+conn L2TP-PSK-noNAT
+    authby=secret
+    pfs=no
+    auto=add
+    keyingtries=3
+    rekey=no
+    ikelifetime=8h
+    keylife=1h
+    type=transport
+    left= 填入自己linode的IP
+    leftprotoport=17/1701
+    right=%any
+    rightprotoport=17/%any
+</code></pre>
+
+<h4>
+<a id="user-content-23-设置-psk-预共享密钥" class="anchor" href="#23-%E8%AE%BE%E7%BD%AE-psk-%E9%A2%84%E5%85%B1%E4%BA%AB%E5%AF%86%E9%92%A5" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.3 设置 PSK 预共享密钥</h4>
+
+<p>编辑/etc/ipsec.secrets，插入下面一行内容：
+  <code>服务器的公网IPv4地址  %any: PSK “wangyuxiong.com”</code></p>
+
+<h4>
+<a id="user-content-24-对系统的网络策略进行一些调整" class="anchor" href="#24-%E5%AF%B9%E7%B3%BB%E7%BB%9F%E7%9A%84%E7%BD%91%E7%BB%9C%E7%AD%96%E7%95%A5%E8%BF%9B%E8%A1%8C%E4%B8%80%E4%BA%9B%E8%B0%83%E6%95%B4" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.4 对系统的网络策略进行一些调整</h4>
+
+<pre><code>for each in /proc/sys/net/ipv4/conf/*
+do
+    echo 0 &gt; $each/accept_redirects
+    echo 0 &gt; $each/send_redirects
+done
+</code></pre>
+
+<p>将上面这段代码完整地复制一次，加入到 /etc/rc.local 中，使其在每次系统启动时都生效。</p>
+
+<h4>
+<a id="user-content-25-重启一次-ipsec-服务" class="anchor" href="#25-%E9%87%8D%E5%90%AF%E4%B8%80%E6%AC%A1-ipsec-%E6%9C%8D%E5%8A%A1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.5 重启一次 IPSec 服务</h4>
+
+<p><code>service ipsec restart</code></p>
+
+<h4>
+<a id="user-content-26-运行ipsec-verify结果如下" class="anchor" href="#26-%E8%BF%90%E8%A1%8Cipsec-verify%E7%BB%93%E6%9E%9C%E5%A6%82%E4%B8%8B" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.6 运行ipsec verify，结果如下：</h4>
+
+<blockquote>
+<p>root@metaboy:~# ipsec verify
+Checking your system to see if IPsec got installed and started correctly:
+Version check and ipsec on-path                                                [OK]
+Linux Openswan U2.6.37/K3.13.7-x86_64-linode38 (netkey)
+Checking for IPsec support in kernel                                           [OK]
+SAref kernel support                                                                    [N/A]
+NETKEY: Testing XFRM related proc values                               [OK]
+         [OK]
+         [OK]
+Checking that pluto is running                                                       [OK]
+Pluto listening for IKE on udp 500                                                 [OK]
+Pluto listening for NAT-T on udp 4500                                           [OK]
+Two or more interfaces found, checking IP forwarding                  [OK]
+Checking NAT and MASQUERADEing                                          [OK]
+Checking for ‘ip’ command                                                             [OK]
+Checking /bin/sh is not /bin/dash                                                   [OK]
+Checking for ‘iptables’ command                                                   [OK]
+Opportunistic Encryption Support                                                  [DISABLED]</p>
+</blockquote>
+
+<h3>
+<a id="user-content-3-l2tp的部署" class="anchor" href="#3-l2tp%E7%9A%84%E9%83%A8%E7%BD%B2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3. L2TP的部署</h3>
+
+<h4>
+<a id="user-content-31-安装l2tp" class="anchor" href="#31-%E5%AE%89%E8%A3%85l2tp" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3.1. 安装L2TP</h4>
+
+<pre><code> `apt-get install xl2tpd`
+</code></pre>
+
+<p>3.2 编辑 L2TP 配置文件 <code>/etc/xl2tpd/xl2tpd.conf</code>
+     文件内容替换为下面的内容：</p>
+
+<pre><code>[global]
+; listen-addr = 192.168.1.98
+[lns default]
+ip range = 10.1.1.2-10.1.1.255
+local ip = 10.1.1.1
+require chap = yes
+refuse pap = yes
+require authentication = yes
+name = LinuxVPNserver
+ppp debug = yes
+pppoptfile = /etc/ppp/options.xl2tpd
+length bit = yes
+</code></pre>
+
+<h3>
+<a id="user-content-4-配置ppp" class="anchor" href="#4-%E9%85%8D%E7%BD%AEppp" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4. 配置PPP</h3>
+
+<h4>
+<a id="user-content-41-安装ppp" class="anchor" href="#41-%E5%AE%89%E8%A3%85ppp" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4.1 安装PPP</h4>
+
+<pre><code>`apt-get install pop`
+</code></pre>
+
+<h4>
+<a id="user-content-42-配置etcpppoptionsxl2tpd" class="anchor" href="#42-%E9%85%8D%E7%BD%AEetcpppoptionsxl2tpd" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4.2 配置/etc/ppp/options.xl2tpd</h4>
+
+<p>先从 xl2tpd 文档中复制一个配置文件样例到我们的配置文件目录：
+<code>cp /usr/share/doc/xl2tpd/examples/ppp-options.xl2tpd /etc/ppp/options.xl2tpd</code></p>
+
+<p>编辑/etc/ppp/options.xl2tpd，内容如下：</p>
+
+<pre><code>ipcp-accept-local
+ipcp-accept-remote
+ms-dns  8.8.8.8
+ms-dns  8.8.4.4
+noccp
+auth
+crtscts
+idle 1800
+mtu 1410
+mru 1410
+nodefaultroute
+debug
+name l2tpd
+lock
+proxyarp
+connect-delay 5000
+</code></pre>
+
+<p>注意下这个name很重要，需要记住，后面需要用到。</p>
+
+<h4>
+<a id="user-content-43-添加用户账户账户都在-etcpppchap-secrets-中" class="anchor" href="#43-%E6%B7%BB%E5%8A%A0%E7%94%A8%E6%88%B7%E8%B4%A6%E6%88%B7%E8%B4%A6%E6%88%B7%E9%83%BD%E5%9C%A8-etcpppchap-secrets-%E4%B8%AD" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4.3. 添加用户账户，账户都在 /etc/ppp/chap-secrets 中</h4>
+
+<pre><code># Secrets for authentication using CHAP
+# client        server  secret                       IP addresses
+user             l2tpd   wangyuxiong.com          * 
+</code></pre>
+
+<p>这里的server与步骤4.2配置中的name必须保持一致。</p>
+
+<h4>
+<a id="user-content-44-重启xl2tpd" class="anchor" href="#44-%E9%87%8D%E5%90%AFxl2tpd" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4.4 重启xl2tpd</h4>
+
+<p><code>service xl2tpd restart</code></p>
+
+<h3>
+<a id="user-content-5-转发设置" class="anchor" href="#5-%E8%BD%AC%E5%8F%91%E8%AE%BE%E7%BD%AE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>5. 转发设置</h3>
+
+<h4>
+<a id="user-content-51-启用转发设置" class="anchor" href="#51-%E5%90%AF%E7%94%A8%E8%BD%AC%E5%8F%91%E8%AE%BE%E7%BD%AE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>5.1 启用转发设置：</h4>
+
+<p>编辑/etc/sysctl.conf，找到net.ipv4.ip_forward=1这一行，将前面的#去掉，然后运行sysctl -p令其生效。</p>
+
+<h4>
+<a id="user-content-52-永久生效" class="anchor" href="#52-%E6%B0%B8%E4%B9%85%E7%94%9F%E6%95%88" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>5.2 永久生效</h4>
+
+<p>编辑/etc/rc.local，添加下面一行：
+  <code>iptables -t nat -A POSTROUTING -s 10.1.1.0/24 -o eth0 -j MASQUERADE</code></p>
+
+<p>在终端运行一次上述 iptables 命令，即可令转发立即生效。</p>
+
+<p>搞完这几个步骤，就可以体验下墙外的生活了。</p>
+
+<pre lang="END~~~~~"><code>
+</code></pre>
