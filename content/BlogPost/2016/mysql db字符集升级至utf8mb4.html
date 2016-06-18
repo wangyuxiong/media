@@ -1,0 +1,119 @@
+<h1>
+<a id="user-content-mysql-db字符集升级至utf8mb4" class="anchor" href="#mysql-db%E5%AD%97%E7%AC%A6%E9%9B%86%E5%8D%87%E7%BA%A7%E8%87%B3utf8mb4" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>mysql db字符集升级至utf8mb4</h1>
+
+<h2>
+<a id="user-content-为什么需要升级" class="anchor" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E5%8D%87%E7%BA%A7" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>为什么需要升级</h2>
+
+<p>最近，因业务方的数据库支持utf8mb4，而DataX同步工具还停留在支持utf8字符集上。导致一些同步任务无法正确同步emoji等表情符号字段，出现大量的乱码。</p>
+
+<p>mysql 5.5.3版本之前，utf8编码最多支持3个字节，也就是BMP这部分的编码区，范围0000～FFFF这一部分。详细的映射关系（<a href="https://en.wikipedia.org/wiki/Universal_Character_Set_characters">https://en.wikipedia.org/wiki/Universal_Character_Set_characters</a>）</p>
+
+<p>mysql 5.5.3 之后的版本，增加utf8mb4, 官方介绍它是向下兼容utf8字符集，比utf8能表示更多的字符。</p>
+
+<p>目前了解到的情况，大部分移动项目，因为要存储用户的文本，会存储大量的emoji等表情符号，这种会需要utf8mb4的支持。</p>
+
+<h2>
+<a id="user-content-升级兼容性问题" class="anchor" href="#%E5%8D%87%E7%BA%A7%E5%85%BC%E5%AE%B9%E6%80%A7%E9%97%AE%E9%A2%98" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>升级兼容性问题</h2>
+
+<p>utf8mb4作为utf8的超集，也是向下兼容utf8的，所以不用担心字符的兼容性问题。</p>
+
+<p>但是切换后生效，需要重新启动mysql服务端，对业务库会存在一定的影响。（官方文档介绍说是动态修改配置，本人没有测试过，但是参考发部分的文档，都是需要重启才会生效。）</p>
+
+<p>升级后，重跑了一轮mysql相关插件的测试集，无任何异常。可以证明升级后datax mysql插件的兼容性是没有影响的。</p>
+
+<h2>
+<a id="user-content-升级步骤" class="anchor" href="#%E5%8D%87%E7%BA%A7%E6%AD%A5%E9%AA%A4" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>升级步骤</h2>
+
+<ul>
+<li><p>检查mysql版本。如果版本低于5.5.3,请先升级mysql server。</p></li>
+<li><p>修改 <code>/etc/my.cnf</code></p></li>
+</ul>
+
+<pre><code>     [client]
+         default-character-set = utf8mb4
+         [mysql]
+        default-character-set = utf8mb4
+         [mysqld]
+        character-set-client-handshake = FALSE
+        character-set-server = utf8mb4
+        collation-server = utf8mb4_unicode_ci
+        init_connect='SET NAMES utf8mb4'
+</code></pre>
+
+<ul>
+<li>修改database、table和column字符集（根据自身的情况决定）</li>
+</ul>
+
+<pre><code>ALTER DATABASE database_name CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+ALTER TABLE table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE table_name CHANGE column_name VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+</code></pre>
+
+<ul>
+<li>
+<p>重启服务后，检查字符</p>
+
+<ul>
+<li>重启：<code>sudo /etc/init.d/mysql restart</code>
+</li>
+<li>进入mysql命令行 ：<code>mysql -h localhost -uroot -proot</code>
+</li>
+<li>检查字符集</li>
+</ul>
+</li>
+</ul>
+
+<pre><code>mysql&gt; SHOW VARIABLES WHERE Variable_name LIKE 'character\_set\_%' OR Variable_name LIKE 'collation%';
+        +--------------------------+--------------------+
+        | Variable_name            | Value              |
+        +--------------------------+--------------------+
+        | character_set_client     | utf8mb4            |
+        | character_set_connection | utf8mb4            |
+        | character_set_database   | utf8mb4            |
+        | character_set_filesystem | binary             |
+        | character_set_results    | utf8mb4            |
+        | character_set_server     | utf8mb4            |
+        | character_set_system     | utf8               |
+        | collation_connection     | utf8mb4_unicode_ci |
+        | collation_database       | utf8mb4_unicode_ci |
+        | collation_server         | utf8mb4_unicode_ci |
+        +--------------------------+--------------------+
+        10 rows in set (0.01 sec)
+</code></pre>
+
+<h2>
+<a id="user-content-备注" class="anchor" href="#%E5%A4%87%E6%B3%A8" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>备注：</h2>
+
+<p>必须保证<code>charactersetclient/charactersetconnection/charactersetdatabase/charactersetresults/charactersetserver</code>为utf8mb4。</p>
+
+<p><strong>这几个变量的意义如下：</strong></p>
+
+<ul>
+<li>charactersetserver：默认的内部操作字符集</li>
+<li>charactersetclient：客户端来源数据使用的字符集</li>
+<li>charactersetconnection：连接层字符集</li>
+<li>charactersetresults：查询结果字符集</li>
+<li>charactersetdatabase：当前选中数据库的默认字符集</li>
+<li>charactersetsystem：系统元数据(字段名等)字符集</li>
+</ul>
+
+<p>Mysql字符集设置的详细介绍: <a href="http://www.laruence.com/2008/01/05/12.html">http://www.laruence.com/2008/01/05/12.html</a></p>
+
+<h3>
+<a id="user-content-检查使用配置" class="anchor" href="#%E6%A3%80%E6%9F%A5%E4%BD%BF%E7%94%A8%E9%85%8D%E7%BD%AE" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>检查使用配置</h3>
+
+<ul>
+<li><p>检查mysql-connector 版本，需要高于5.1.3版本，否则无法使用utf8mb4</p></li>
+<li><p>假设使用jdbc-url进行连接，需要注意characterEncoding=utf8可以被自动被识别为utf8mb4（当然也兼容原来的utf8).
+<code>jdbc.url=jdbc:mysql://localhost:3306/database?useUnicode=true&amp;characterEncoding=utf8&amp;autoReconnect=true&amp;rewriteBatchedStatements=TRUE</code></p></li>
+</ul>
+
+<h2>
+<a id="user-content-参考文档" class="anchor" href="#%E5%8F%82%E8%80%83%E6%96%87%E6%A1%A3" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>参考文档</h2>
+
+<ul>
+<li><a href="http://dev.mysql.com/doc/relnotes/connector-j/en/news-5-1-13.html">http://dev.mysql.com/doc/relnotes/connector-j/en/news-5-1-13.html</a></li>
+<li><a href="http://www.laruence.com/2008/01/05/12.html">http://www.laruence.com/2008/01/05/12.html</a></li>
+<li><a href="http://segmentfault.com/a/1190000000616820">http://segmentfault.com/a/1190000000616820</a></li>
+<li><a href="http://my.oschina.net/wingyiu/blog/153357">http://my.oschina.net/wingyiu/blog/153357</a></li>
+</ul>
