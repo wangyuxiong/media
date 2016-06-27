@@ -1,0 +1,175 @@
+<h1>
+<a id="user-content-弄清楚你写的join" class="anchor" href="#%E5%BC%84%E6%B8%85%E6%A5%9A%E4%BD%A0%E5%86%99%E7%9A%84join" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>弄清楚你写的join</h1>
+
+<p>这里，我以PostgreSQL为例，主要也是因为，现在的数据仓库的环境是GP的环境，导致sql主要以psql为主。所以，我最近的重点也是放到psql上面。（当然Oracle RAC也是很重要的）</p>
+
+<p>先看看，psql支持的5中join方式：</p>
+
+<ul>
+<li><code>[ INNER ] JOIN</code></li>
+<li><code>LEFT [ OUTER ] JOIN</code></li>
+<li><code>RIGHT [ OUTER ] JOIN</code></li>
+<li><code>FULL [ OUTER ] JOIN</code></li>
+<li><code>CROSS JOIN</code></li>
+</ul>
+
+<p><em>INNER 和 OUTER 连接类型， 我们必须声明一个连接条件，也就是说一个 NATURAL， ON join_condition， 或者 USING (join_column [, …])。对于 CROSS JOIN，这些子句都不能出现。</em></p>
+
+<p>为说明问题，简单用几个sql 来说明一下：</p>
+
+<p><strong>表A:</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>aid</th>
+<th>men_id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>test_0001</td>
+</tr>
+<tr>
+<td>2</td>
+<td>test_002</td>
+</tr>
+<tr>
+<td>3</td>
+<td>test_0005</td>
+</tr>
+<tr>
+<td>4</td>
+<td>test_0007</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>表B:</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>bid</th>
+<th>name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>love</td>
+</tr>
+<tr>
+<td>2</td>
+<td>push</td>
+</tr>
+<tr>
+<td>3</td>
+<td>code</td>
+</tr>
+<tr>
+<td>6</td>
+<td>test</td>
+</tr>
+</tbody>
+</table>
+
+<p>准备的实验数据，表A和表B</p>
+
+<p><code>CROSS JOIN</code> 和 <code>INNER JOIN</code> 生成一个简单的笛卡儿积，和你在 FROM 的顶层列出两个项的结果相同。 <code>CROSS JOIN</code> 等效于 <code>INNER JOIN ON (true)</code>， 也就是说，没有被条件删除的行。这种连接类型只是符号上的方便， 因为它们和你用简单的 FROM 和 WHERE 干的事情是一样的。</p>
+
+<pre><code>SELECT * FROM A INNER JOIN B ON A.aid = B.bid;
+</code></pre>
+
+<p><strong>返回的结果:</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>aid</th>
+<th>men_id</th>
+<th>bid</th>
+<th>name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>test_0001</td>
+<td>1</td>
+<td>love</td>
+</tr>
+<tr>
+<td>2</td>
+<td>test_002</td>
+<td>2</td>
+<td>push</td>
+</tr>
+<tr>
+<td>3</td>
+<td>test_0005</td>
+<td>3</td>
+<td>code</td>
+</tr>
+</tbody>
+</table>
+
+<p>看到这个返回结果，是不是觉得<code>FROM A，B WHERE A.aid=B.bid</code>; 也可以得到相同的结果呢？</p>
+
+<p><code>LEFT OUTER JOIN</code> 返回有条件的笛卡儿积（也就是说， 所有组合出来的行都通过了连接条件）中的行，加上左手边的表中没有对应的右手边表的行可以一起匹配通过连接条件的那些行。 这样的左手边的行扩展成连接生成表的全长，方法是在那些右手边表对应的字段位置填上空。</p>
+
+<p><em>请注意，只有在决定那些行是匹配的时候， 之计算 JOIN 子句自己的条件。外层的条件是在这之后施加的。</em></p>
+
+<pre><code>SELECT * FROM A LEFT JOIN B ON A.aid = B.aid;
+</code></pre>
+
+<p><strong>返回的结果为:</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>aid</th>
+<th>men_id</th>
+<th>bid</th>
+<th>name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>test_0001</td>
+<td>1</td>
+<td>love</td>
+</tr>
+<tr>
+<td>2</td>
+<td>test_002</td>
+<td>2</td>
+<td>push</td>
+</tr>
+<tr>
+<td>3</td>
+<td>test_0003</td>
+<td>3</td>
+<td>code</td>
+</tr>
+<tr>
+<td>4</td>
+<td>test_0004</td>
+<td>NULL</td>
+<td>NULL</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>看看其它的几个join情况：</strong></p>
+
+<ul>
+<li><p>对应的是，RIGHT OUTER JOIN 返回所有连接出来的行， 加上每个不匹配的右手边行（左边用空值扩展）。这只是一个符号上的便利，因为我们总是可以把它转换成一个 <code>LEFT OUTER JOIN</code>， 只要把左边和右边的输入对掉一下即可。</p></li>
+<li><p><code>FULL OUTER JOIN</code> 返回所有连接出来的行，加上每个不匹配的左手边的行（右边用空值扩展）， 加上每个不匹配的右手边的行（左边用空值扩展）。</p></li>
+</ul>
+
+<p>我们常用的还是<code>left join,inner join</code> 2种情况,到目前为止,有人统计过得使用情况,80%的都是使用left join,对于其他的一些情况,一般我们都是直接用用FROM ……WHERE直接处理了.</p>
+
+<p>后面，会继续研究一下join的实现算法，也就是我们常说得 <code>NESTED LOOP，hash join，sort merge join。</code></p>
