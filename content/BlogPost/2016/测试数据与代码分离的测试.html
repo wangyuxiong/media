@@ -1,0 +1,210 @@
+<h1>
+<a id="user-content-测试数据与代码分离的测试" class="anchor" href="#%E6%B5%8B%E8%AF%95%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%BB%A3%E7%A0%81%E5%88%86%E7%A6%BB%E7%9A%84%E6%B5%8B%E8%AF%95" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>测试数据与代码分离的测试</h1>
+
+<p>今天看到花花同学写的白盒测试的白皮书，大致翻了下。感觉缺少点什么，之前也一直都在讨论，测试数据与测试代码是否需要分离，测试代码如何建设冗余的问题。如何解决这2个问题，feed4junit是一种思路，我对比junit 4和feed4junit的功能，大致了解这些功能的实现。</p>
+
+<p>对于网站的接口测试，常常面临的一个场景：大量不同的输入，但处理逻辑的业务不变，对其结果进行验证也会有不同的期望值。按照之前的一些思路，往往会为每一组输入和输入写一个case，达成大量的代码冗余。</p>
+
+<p>基于上面的场景，junit 4给出了参数化的特性，从而实现了不同的输入对应相同的代码。</p>
+
+<p>待测的方法：</p>
+
+<pre><code>public class UserAccess {
+        // simple validation for user name and password
+        public static boolean accessCheck(String userName, String password) {
+               if (userName.length() &lt;= 4 || userName.length() &gt; 8 )
+                      return false;
+               if (password.length() &lt;= 4 || password.length() &gt; 8 )
+                      return false;
+               if (userName.contains("@" ))
+                      return false;
+               if (password.contains("*" ))
+                      return false;
+               return true;
+       }
+}
+</code></pre>
+
+<h2>
+<a id="user-content-1-使用junit参数化减少代码冗余" class="anchor" href="#1-%E4%BD%BF%E7%94%A8junit%E5%8F%82%E6%95%B0%E5%8C%96%E5%87%8F%E5%B0%91%E4%BB%A3%E7%A0%81%E5%86%97%E4%BD%99" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1. 使用Junit参数化,减少代码冗余：</h2>
+
+<p>测试代码：</p>
+
+<pre><code>import java.util.Arrays;
+import java.util.Collection;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import static org.junit.Assert.assertEquals ;
+
+import sample.junit.code.UserAccess;
+
+/*
+ * JUnit - Parameter test sample
+ */
+@RunWith(Parameterized.class)
+public class JunitSample {
+        private String user ;
+        private String pwd ;
+        private boolean expected ;
+
+        @Parameters
+        public static Collection dataGenerate(){
+               return Arrays.asList( new Object[][]{
+                           { "user01","123456" ,true},
+                           { "user02","123456" ,true},
+                           { "user03","12345678" ,true}
+              });
+       }
+
+        public JunitSample(String user,String pwd,boolean expected){
+               this.user = user;
+               this.pwd = pwd;
+               this.expected = expected;
+       }
+
+        @Test
+        public void testAccessCheck(){
+               assertEquals(expected,UserAccess. accessCheck(user, pwd));
+       }
+}
+</code></pre>
+
+<p>运行结果如下所示：</p>
+
+<p><a href="/media/content/BlogPost/images/20160629_image1.jpg" target="_blank"><img src="/media/content/BlogPost/images/20160629_image1.jpg" alt="" style="max-width:100%;"></a>￼</p>
+
+<h2>
+<a id="user-content-2-数据与代码的分离feed4junit" class="anchor" href="#2-%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%BB%A3%E7%A0%81%E7%9A%84%E5%88%86%E7%A6%BBfeed4junit" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2. 数据与代码的分离（Feed4Junit）</h2>
+
+<p>Feed4JUnit 是开源的测试组件，您可以从如下链接下载最新版本: <a href="http://sourceforge.net/projects/feed4junit/files/">http://sourceforge.net/projects/feed4junit/files/</a></p>
+
+<p>Feed4JUnit 的数据源可以包括以下几种类型 – 文件 (CSV 或者 Excel )、数据库、自定义数据源。</p>
+
+<p>基本的使用方法： Feed4JUnit 使用一个特殊的运行类 Feeder.class，用来支持与标识参数化测试，如果您想要编写数据与代码分离的测试脚本，必须同时满足下面的三个条件：</p>
+
+<ol>
+<li>必须在您的测试类上增加注释 @RunWith(Feeder.class) 。</li>
+<li>您需要使用 @Test 来标示您实现测试的方法。</li>
+<li>使用 @Source 来声明和接收数据源的数据。</li>
+</ol>
+
+<h3>
+<a id="user-content-21-文件数据源excel和csv差不多" class="anchor" href="#21-%E6%96%87%E4%BB%B6%E6%95%B0%E6%8D%AE%E6%BA%90excel%E5%92%8Ccsv%E5%B7%AE%E4%B8%8D%E5%A4%9A" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.1. 文件数据源（excel和csv差不多）</h3>
+
+<ul>
+<li>在测试项目的根目录下创建 data.xls 和data.csv数据文件，第一行会以列名存在，在运行过程中不会作为数据读取。</li>
+</ul>
+
+<p><a href="/media/content/BlogPost/images/20160629_image2.jpg" target="_blank"><img src="/media/content/BlogPost/images/20160629_image2.jpg" alt="" style="max-width:100%;"></a>￼</p>
+
+<ul>
+<li>
+<p>创建测试类并在接收数据的测试方法上声明数据源为 @Source("Data.xls")，Excel 中的数据在传递过程中会自动按照列与测试方法的参数的位置顺序进行匹配，并以行作为一个单位读取并传递给测试方法体。</p>
+
+<p>比如上图中的 user 列的值会做为方法的第一个参数传入方法体中，pw 列的值会作为方法的第二个参数，以此类推。在测试进行过程中，首先在 Excel 文件中读取一行（包含三列），接着按照位置顺序将数据传递到方法体中（每列按顺序对应一个参数）进行执行，执行完成后读取 Excel 中的下一行进行相同流程的测试，其原理与 Java 中的迭代器十分类似。</p>
+
+<p>请注意当数据文件中数据的列数小于测试方法参数的个数的时候，测试会因为位置不匹配而失败。如下所示:</p>
+</li>
+</ul>
+
+<pre><code>import static org.junit.Assert.assertEquals ;
+
+import org.databene.benerator.anno.Source;
+import org.databene.feed4junit.Feeder;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import sample.junit.code.*;
+
+@RunWith (Feeder.class )
+public class Feed4junitSample {
+        @Test
+        @Source( "Data.csv" )//CSV source
+        public void testAccessCheck_CSV(String userName, String pw, boolean expected) {
+               assertEquals(expected, UserAccess. accessCheck(userName, pw));
+       }
+
+        @Test
+        @Source( "data.xls" )//Excel source
+        public void testAccessCheck_Excel(String userName, String pw, boolean expected) {
+               assertEquals(expected, UserAccess. accessCheck(userName, pw));
+       }
+
+}
+</code></pre>
+
+<p>运行结果如下：</p>
+
+<p><a href="/media/content/BlogPost/images/20160629_image3.jpg" target="_blank"><img src="/media/content/BlogPost/images/20160629_image3.jpg" alt="" style="max-width:100%;"></a>￼</p>
+
+<h3>
+<a id="user-content-22-数据库作为数据源" class="anchor" href="#22-%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BD%9C%E4%B8%BA%E6%95%B0%E6%8D%AE%E6%BA%90" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>2.2 数据库作为数据源</h3>
+
+<p>同样，Feed4junit也支持数据库数据源，这里不做详细的介绍：其原理和上面文件数据源差不多，样例代码如下：</p>
+
+<p><strong>类上声明@Database：</strong></p>
+
+<pre><code>import static org.junit.Assert.assertEquals;
+import org.databene.benerator.anno.Database;
+import org.databene.benerator.anno.Source;
+import org.databene.feed4junit.Feeder;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import sample.code.UserAccess;
+
+/*
+ * Feed4JUnit - Get Data from Database, all test methods can use the database data
+ */
+@RunWith(Feeder.class)
+@Database(
+                id = "testdb", 
+                url = "jdbc:mysql://localhost:5000/SAMPLE", 
+                driver = "com.mysql.jdbc.Driver", 
+                user = "admin", 
+                password = "admin")
+public class F4JfromDB {
+
+        @Test
+        @Source(id = "testdb", selector = "select * from TEST")
+        public void testAccessCheck(String userName, String pw, String expected) {
+                Boolean bSucess = UserAccess.accessCheck(userName.trim(), pw.trim());
+                assertEquals(expected.trim(), bSucess.toString());
+
+        }
+}
+</code></pre>
+
+<p><strong>测试方法上声明@Database</strong></p>
+
+<pre><code>@RunWith(Feeder.class)
+public class F4JfromDB_Method {
+        @Test
+        @Database(
+                        id = "testdb", 
+                        url = "jdbc:mysql://localhost:5000/SAMPLE", 
+
+                        driver = "com.mysql.jdbc.Driver", 
+
+                        user = "admin", 
+                        password = "admin")
+        @Source(id = "testdb", selector = "select * from TEST")
+        public void testAccessCheck(String userName, String pw, String expected) {
+                Boolean bSucess = UserAccess.accessCheck(userName.trim(), pw.trim());
+                assertEquals(expected.trim(), bSucess.toString());
+
+        }
+}
+</code></pre>
+
+<p>测试运行过程中，通过 url，driver 等信息建立数据连接，通过 selector 发出数据请求，最后完成查询并把数据传递给测试方法，数据在传递给方法的时候，会按数据表的列的顺序与参数进行匹配.</p>
+
+<h2>
+<a id="user-content-4最后" class="anchor" href="#4%E6%9C%80%E5%90%8E" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4.最后</h2>
+
+<p>Feed4JUnit 提供了对数据与代码分离的测试支持。只需要简单的注释，Feed4JUnit 就可以使用户很方便的实施数据与代码分离之间的测试，对于习惯了JUnit 测试框架的同学来说，是一个十分省力的利器。</p>
+
+<p>Feed4JUnit 同时还提供大量数据的随机测试和等价类测试等众多功能，这个留到后面再进行挖掘。</p>
